@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content=
+"width=device-width, initial-scale=1.0"
+>
+    <title>Interactive Image Color Filler</title>
+    <link href=
+"https://fonts.googleapis.com/css2?family=Libre+Baskerville:wght@400;700&display=swap"
+ rel="stylesheet">
+    <style>
+        :root {
+            --main-font: 'Libre Baskerville', Georgia, serif;
+            
+            /* Standard Colors (kept for internal use and highlights) */
+            --main-blue: #007bff;
+            --main-purple: #6f42c1; 
+            
+            /* Greyscale Palette for Buttons */
+            --button-bg: #e9ecef;
+            --button-border: #343a40;
+            --button-text: #343a40;
+            --button-hover: #dee2e6;
+            --button-active: #d6d6d6;
+            
+            --control-bg: #ffffff;
+            --border-color: #e9ecef;
+            --light-grey: #f0f0f0;
+            --dark-grey-text: #343a40;
+        }
+
+        body {
+            font-family: var(--main-font);
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+            background-color: var(--light-grey);
+            min-height: 100vh;
+            margin: 0;
+        }
+
+        #controls {
+            flex-shrink: 0;
+            width: 300px;
+            background: var(--control-bg);
+            padding: 0;
+            border-radius: 10px;
+            box-shadow: 0 0 0 1px var(--border-color), 0 8px 16px rgba(0,0,0,0.1); 
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            position: relative;
+            overflow: visible;
+        }
+
+        .control-group {
+            background-color: var(--control-bg);
+            padding: 15px;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 0;
+        }
+        .control-group:first-child {
+            border-top-left-radius: 10px;
+            border-top-right-radius: 10px;
+        }
+        .control-group:last-child {
+            border-bottom: none;
+            border-bottom-left-radius: 10px;
+            border-bottom-right-radius: 10px;
+        }
+
+        .control-group h2 {
+            margin-top: 0;
+            font-size: 1.2em;
+            color: var(--dark-grey-text);
+            border-left: 4px solid var(--main-blue);
+            padding-left: 10px;
+            margin-bottom: 15px;
+            font-family: var(--main-font);
+        }
+
+        #image-container {
+            flex-grow: 1;
+            background: var(--control-bg);
+            border-radius: 10px;
+            padding: 10px;
+            text-align: center;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 0 0 1px var(--border-color), 0 8px 16px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column; 
+        }
+
+        #canvas-wrapper {
+            transition: transform 0.1s ease-out;
+            transform-origin: 0 0;
+            cursor: grab;
+            display: inline-block;
+            margin: 0 auto;
+            flex-grow: 1; 
+        }
+
+        canvas {
+            border: 1px solid #ccc;
+            display: block;
+            margin: 0 auto;
+        }
+        
+        canvas.eraser-cursor {
+            cursor: none;
+        }
+        
+        /* --- Button Styling (Standard Greyscale) --- */
+        .action-button, 
+        .action-button.utility-button-group > button,
+        #selectedColorButton {
+            padding: 10px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: background-color 0.2s, box-shadow 0.2s;
+            font-family: var(--main-font);
+
+            background-color: var(--button-bg);
+            color: var(--button-text);
+            border: 2px solid var(--button-border); 
+            border-radius: 4px;
+        }
+        
+        .action-button:hover, 
+        .action-button.utility-button-group > button:hover,
+        #selectedColorButton:hover {
+            background-color: var(--button-hover);
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .action-button.utility-button-group > button.active {
+            background-color: var(--main-purple); 
+            color: white;
+            border-color: var(--main-purple);
+            box-shadow: 0 0 5px var(--main-purple);
+        }
+        
+        .action-button:disabled,
+        .action-button.utility-button-group > button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background-color: var(--button-bg);
+            color: var(--button-text);
+        }
+
+        /* Utility Button Groups */
+        .action-button.utility-button-group {
+            display: flex;
+            gap: 10px;
+            padding: 0;
+            margin-top: 0;
+            border: none;
+            background: none;
+        }
+        .action-button.utility-button-group > button {
+            flex-grow: 1;
+            margin: 0;
+        }
+
+
+        /* --- Label Box Styles --- */
+        #labels-container {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .label-box {
+            display: flex;
+            align-items: center;
+            padding: 8px 10px; 
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background-color: #f8f9fa;
+        }
+        .label-box:hover {
+            background-color: #e9ecef;
+        }
+        .label-box.active {
+            border-color: var(--main-blue);
+            background-color: #e6f0ff;
+            box-shadow: 0 0 5px rgba(0, 123, 255, 0.3);
+            font-weight: bold;
+        }
+
+        .label-color-preview {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            border: 1px solid #333;
+            flex-shrink: 0;
+        }
+
+        .label-box-text {
+            font-family: var(--main-font);
+            font-size: 0.9em;
+            margin-left: 10px;
+            flex-grow: 1; 
+        }
+        
+        .label-box-actions {
+            margin-left: 10px;
+            flex-shrink: 0;
+        }
+
+        .label-box-actions button {
+            background: none;
+            border: none;
+            color: #dc3545; 
+            font-size: 1.2em;
+            cursor: pointer;
+            padding: 0 5px;
+            line-height: 1; 
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+        .label-box-actions button:hover {
+            opacity: 1;
+            color: #c82333;
+        }
+
+        /* Input Field Styling */
+        input[type="text"],
+        input[type="file"] {
+            width: 100%;
+            padding: 10px;
+            font-size: 1em;
+            border: 1px solid #ccc; 
+            border-radius: 4px;
+            box-sizing: border-box; 
+            font-family: var(--main-font);
+            margin-bottom: 5px;
+        }
+        #newLabelName {
+            border: 2px solid var(--button-border); 
+            margin-bottom: 10px; 
+        }
+
+        /* --- Toolbars under Image --- */
+        #toolbar-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 5px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        /* Zoom Controls Styling */
+        #zoom-controls,
+        #label-scale-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 5px 0;
+        }
+        
+        #zoom-controls .action-button,
+        #label-scale-controls .action-button {
+            padding: 5px 10px;
+        }
+        
+        #label-scale-controls input[type="range"] {
+            width: 120px;
+            margin: 0;
+        }
+        
+        .control-label {
+            font-size: 0.9em;
+            color: var(--dark-grey-text);
+            font-weight: 700;
+        }
+
+        /* --- Color Picker Popup Styles --- */
+        #selectedColorButton {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-grow: 1;
+            margin-bottom: 10px;
+        }
+
+        #selectedColorPreview {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            border: 1px solid #333;
+            flex-shrink: 0;
+        }
+
+        #color-swatch-popup {
+            position: absolute;
+            top: 195px; 
+            left: 15px; 
+            width: calc(100% - 30px);
+            max-width: 270px;
+            background: var(--control-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            padding: 10px;
+            z-index: 100;
+            display: none;
+            flex-direction: column;
+        }
+        
+        #color-swatch-selector {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: flex-start;
+        }
+        
+        .color-swatch {
+            width: 40px; 
+            height: 40px; 
+            border-radius: 4px; 
+            border: 2px solid #ccc;
+            cursor: pointer;
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+        .color-swatch.active {
+            border-color: black;
+            box-shadow: 0 0 0 3px var(--main-blue);
+        }
+        .color-swatch.recommended {
+            border-color: var(--main-blue);
+        }
+        
+        .popup-header {
+            font-weight: bold;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+            color: var(--dark-grey-text);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="controls">
+        <div class="control-group">
+            <h2>1. Image Load</h2>
+            <input type="file" id="imageLoader" accept="image/*">
+        </div>
+
+        <div class="control-group">
+            <h2>2. Define Label</h2>
+            <div class="input-group">
+                <input type="text" id="newLabelName" placeholder="Label Name" required>
+            </div>
+            
+            <button id="selectedColorButton">
+                <div id="selectedColorPreview"></div>
+                <span>Select Color</span>
+            </button>
+            
+            <button id="addLabelBtn" class="action-button" onclick="addLabel()">Add Label</button>
+        </div>
+        
+        <div id="color-swatch-popup">
+            <div class="popup-header">Choose a Label Color:</div>
+            <div id="color-swatch-selector">
+                </div>
+        </div>
+
+        <div class="control-group">
+            <h2>3. Label List</h2>
+            <div id="labels-container">
+                </div>
+            <p style="font-size: 0.8em; margin-top: 10px; font-family: var(--main-font);">
+                Click a label to select/deselect it for coloring.
+            </p>
+        </div>
+        
+        <div class="control-group">
+            <h2>4. Tools</h2>
+            <div class="action-button utility-button-group" style="margin-bottom: 10px;">
+                <button id="fillEraserBtn">🧹 Fill Eraser</button> 
+                <button id="dragEraserBtn">🖌️ Drag Eraser</button> 
+            </div>
+            <div class="action-button utility-button-group">
+                <button id="undoBtn" disabled>↩️ Undo</button>
+                <button id="clearAllBtn" disabled>🗑️ Clear All</button>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <h2>5. Save</h2>
+            <button id="downloadBtn" class="action-button">Download Labeled Image</button>
+        </div>
+    </div>
+
+    <div id="image-container">
+        <div id="toolbar-container">
+            <div id="zoom-controls">
+                <span class="control-label">Zoom:</span>
+                <button id="zoomInBtn" class="action-button">+</button>
+                <button id="zoomOutBtn" class="action-button">-</button>
+                <span id="currentZoomLevel">100%</span>
+                <button id="zoomResetBtn" class="action-button">Reset</button>
+            </div>
+
+            <div id="label-scale-controls">
+                <span class="control-label">Label Size:</span>
+                <input type="range" id="labelScaleSlider" min="10" max="100" value="16"> <button id="labelScaleResetBtn" class="action-button">Reset</button>
+            </div>
+        </div>
+        
+        <div id="canvas-wrapper">
+            <canvas id="imageCanvas"></canvas>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('imageCanvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const imageLoader = document.getElementById('imageLoader');
+        const labelsContainer = document.getElementById('labels-container');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const newLabelNameInput = document.getElementById('newLabelName');
+        const canvasWrapper = document.getElementById('canvas-wrapper');
+        const undoBtn = document.getElementById('undoBtn');
+        const clearAllBtn = document.getElementById('clearAllBtn');
+        
+        const fillEraserBtn = document.getElementById('fillEraserBtn'); 
+        const dragEraserBtn = document.getElementById('dragEraserBtn'); 
+        
+        const selectedColorButton = document.getElementById('selectedColorButton'); 
+        const selectedColorPreview = document.getElementById('selectedColorPreview'); 
+        const colorSwatchPopup = document.getElementById('color-swatch-popup'); 
+        const colorSwatchSelector = document.getElementById('color-swatch-selector'); 
+        
+        const zoomInBtn = document.getElementById('zoomInBtn');
+        const zoomOutBtn = document.getElementById('zoomOutBtn');
+        const zoomResetBtn = document.getElementById('zoomResetBtn');
+        const currentZoomLevelEl = document.getElementById('currentZoomLevel');
+        
+        const labelScaleSlider = document.getElementById('labelScaleSlider'); 
+        const labelScaleResetBtn = document.getElementById('labelScaleResetBtn'); 
+
+        let currentImage = null;
+        let labels = [];
+        let activeLabel = null;
+        let selectedColor = null; // This now correctly holds the selected color
+        
+        const FILL_OPACITY = 0.6;
+        const COLOR_TOLERANCE = 35; 
+        const GAP_TOLERANCE = 10;
+        const DEFAULT_LABEL_FONT_SIZE = 16; // Changed default size to 16
+        let currentLabelFontSize = DEFAULT_LABEL_FONT_SIZE; 
+        const DEFAULT_LABEL_STROKE_WIDTH = 2; // Default stroke width
+        let currentLabelStrokeWidth = DEFAULT_LABEL_STROKE_WIDTH;
+
+        const LABEL_FONT_FAMILY = "'Libre Baskerville', Arial"; // Font already bold from this family
+        const LABEL_STROKE_COLOR = '#000000'; // Set stroke to black
+        
+        let zoomLevel = 1.0;
+        const MAX_ZOOM = 4.0;
+        const MIN_ZOOM = 1.0;
+        let isDragging = false;
+        let pan = { x: 0, y: 0, startX: 0, startY: 0 };
+        
+        let history = [];
+        const MAX_HISTORY_SIZE = 20;
+
+        const PRESET_COLORS = [
+            "#ff4040", "#40ff40", "#4040ff", 
+            "#ffaa40", "#40ffff", "#ff40ff", 
+            "#ffaa00", "#aa40ff", "#40aa00", 
+            "#00aaff"  
+        ];
+
+        let activeEraser = 0; 
+        let isErasingDragging = false;
+        const ERASER_SIZE = 30;
+
+        let originalImageData = null; 
+
+        // --- UTILITY FUNCTIONS ---
+        function hexToRgba(hex, alpha) {
+            const r = parseInt(hex.substring(1, 3), 16);
+            const g = parseInt(hex.substring(3, 5), 16);
+            const b = parseInt(hex.substring(5, 7), 16);
+            const a = Math.round(alpha * 255);
+            return [r, g, b, a];
+        }
+
+        function getPixelColor(data, x, y, width) {
+            const index = (y * width + x) * 4;
+            if (index < 0 || index >= data.length) return [0, 0, 0, 0];
+            return [data[index], data[index + 1], data[index + 2], data[index + 3]];
+        }
+
+        function setPixelColor(data, x, y, width, color) {
+            const index = (y * width + x) * 4;
+            data[index] = color[0];
+            data[index + 1] = color[1];
+            data[index + 2] = color[2];
+            data[index + 3] = color[3];
+        }
+
+        function colorDifference(color1, color2) {
+            return Math.sqrt(
+                Math.pow(color1[0] - color2[0], 2) +
+                Math.pow(color1[1] - color2[1], 2) +
+                Math.pow(color1[2] - color2[2], 2)
+            );
+        }
+        
+        // --- HISTORY TRACKING ---
+        function saveState() {
+            if (!currentImage) return;
+
+            if (history.length >= MAX_HISTORY_SIZE) {
+                history.shift();
+            }
+            
+            history.push(ctx.getImageData(0, 0, canvas.width, canvas.height));
+            
+            updateUtilityButtonState();
+        }
+
+        function restoreState(imageData) {
+            if (!currentImage) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.putImageData(imageData, 0, 0);
+        }
+        
+        function updateUtilityButtonState() {
+            const hasHistory = history.length > 1;
+            undoBtn.disabled = !hasHistory;
+            clearAllBtn.disabled = history.length === 0;
+            
+            fillEraserBtn.disabled = !currentImage; 
+            dragEraserBtn.disabled = !currentImage;
+
+            fillEraserBtn.classList.toggle('active', activeEraser === 1);
+            dragEraserBtn.classList.toggle('active', activeEraser === 2);
+
+            if (!currentImage) {
+                activeEraser = 0;
+                canvas.classList.remove('eraser-cursor');
+            }
+        }
+        
+        // --- Color Picker Popup Logic ---
+        selectedColorButton.addEventListener('click', () => {
+            colorSwatchPopup.style.display = 'flex';
+        });
+
+        document.addEventListener('click', (event) => {
+            const isClickInsideControls = document.getElementById('controls').contains(event.target);
+            const isClickInsidePopup = colorSwatchPopup.contains(event.target);
+            const isColorButton = selectedColorButton.contains(event.target);
+
+            if (colorSwatchPopup.style.display === 'flex' && !isClickInsidePopup && !isColorButton && isClickInsideControls) {
+                colorSwatchPopup.style.display = 'none';
+            }
+        });
+
+        function selectColor(color) {
+            selectedColor = color; // Correctly set the selectedColor variable
+            selectedColorPreview.style.backgroundColor = color;
+            
+            const swatches = colorSwatchSelector.querySelectorAll('.color-swatch');
+            swatches.forEach(swatch => {
+                swatch.classList.remove('active', 'recommended');
+                if (swatch.dataset.color === color) {
+                    swatch.classList.add('active');
+                }
+            });
+            
+            highlightRecommendedColor();
+            colorSwatchPopup.style.display = 'none'; 
+        }
+
+        function highlightRecommendedColor() {
+            const usedColors = new Set(labels.map(l => l.color));
+            const nextColor = PRESET_COLORS.find(color => !usedColors.has(color));
+            
+            const swatches = colorSwatchSelector.querySelectorAll('.color-swatch');
+            swatches.forEach(swatch => {
+                if (swatch.dataset.color === nextColor && swatch.dataset.color !== selectedColor) {
+                    swatch.classList.add('recommended');
+                } else {
+                    swatch.classList.remove('recommended');
+                }
+            });
+
+            // Fix: If no color is selected, or the selected color is used, pick a recommended one.
+            if (selectedColor === null || (nextColor && selectedColor !== nextColor)) {
+                 selectColor(nextColor || PRESET_COLORS[0]); // Fallback to first color if no recommended
+            }
+        }
+
+        function populateColorSwatches() {
+            colorSwatchSelector.innerHTML = '';
+            PRESET_COLORS.forEach(color => {
+                const swatch = document.createElement('div');
+                swatch.classList.add('color-swatch');
+                swatch.style.backgroundColor = color;
+                swatch.dataset.color = color;
+                swatch.title = color;
+                swatch.onclick = () => selectColor(color);
+                colorSwatchSelector.appendChild(swatch);
+            });
+            
+            selectedColor = null; 
+            highlightRecommendedColor();
+        }
+
+        // --- RENDER & LABEL MANAGEMENT ---
+
+        function setActiveLabel(label) {
+            if (activeLabel && activeLabel.id === label.id) {
+                activeLabel = null;
+            } else {
+                activeLabel = label;
+                activeEraser = 0; 
+                canvas.classList.remove('eraser-cursor'); 
+                isErasingDragging = false;
+            }
+            renderLabels();
+            updateUtilityButtonState();
+        }
+
+        function renderLabels() {
+            labelsContainer.innerHTML = '';
+            labels.forEach(label => {
+                const div = document.createElement('div');
+                div.classList.add('label-box');
+                if (activeLabel && activeLabel.id === label.id) {
+                    div.classList.add('active');
+                }
+                div.onclick = () => setActiveLabel(label);
+
+                const preview = document.createElement('div');
+                preview.classList.add('label-color-preview');
+                preview.style.backgroundColor = label.color;
+
+                const text = document.createElement('span');
+                text.classList.add('label-box-text');
+                text.textContent = label.name;
+
+                const actions = document.createElement('div');
+                actions.classList.add('label-box-actions');
+
+                const deleteBtn = document.createElement('button');
+                deleteBtn.textContent = '✕';
+                deleteBtn.title = 'Delete Label';
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    labels = labels.filter(l => l.id !== label.id);
+                    if (activeLabel && activeLabel.id === label.id) activeLabel = null;
+                    renderLabels();
+                    highlightRecommendedColor(); 
+                };
+
+                actions.appendChild(deleteBtn);
+
+                div.appendChild(preview);
+                div.appendChild(text);
+                div.appendChild(actions); 
+
+                labelsContainer.appendChild(div);
+            });
+        }
+
+        // --- 1. IMAGE LOADING ---
+        imageLoader.addEventListener('change', handleImage, false);
+
+        function handleImage(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                currentImage = new Image();
+                currentImage.onload = () => {
+                    canvas.width = currentImage.width;
+                    canvas.height = currentImage.height;
+
+                    setZoomLevel(1.0);
+                    pan = { x: 0, y: 0, startX: 0, startY: 0 };
+                    applyZoomAndPan();
+
+                    ctx.drawImage(currentImage, 0, 0);
+                    
+                    const tempCanvas = document.createElement('canvas');
+                    tempCanvas.width = canvas.width;
+                    tempCanvas.height = canvas.height;
+                    const tempCtx = tempCanvas.getContext('2d');
+                    tempCtx.drawImage(currentImage, 0, 0);
+                    originalImageData = tempCtx.getImageData(0, 0, canvas.width, canvas.height);
+
+
+                    history = []; 
+                    saveState(); 
+                    updateUtilityButtonState();
+                    
+                    populateColorSwatches();
+                };
+                currentImage.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // --- 2. LABEL DEFINITION ---
+        function addLabel() {
+            const name = newLabelNameInput.value.trim();
+            const color = selectedColor;
+
+            if (!name) {
+                alert("Please enter a label name.");
+                return;
+            }
+            if (!color) {
+                alert("Please select a color swatch.");
+                return;
+            }
+
+            if (labels.some(label => label.name === name)) {
+                 alert("A label with this name already exists.");
+                 return;
+            }
+            
+            if (labels.some(label => label.color === color)) {
+                 if (!confirm(`Color ${color} is already used. Do you want to use it again?`)) {
+                    return;
+                 }
+            }
+
+            const newLabel = { name, color, id: Date.now() };
+            labels.push(newLabel);
+
+            newLabelNameInput.value = '';
+
+            setActiveLabel(newLabel);
+            highlightRecommendedColor();
+        }
+
+        // --- 3. COLOR FILLING (Click/Flood Fill) ---
+
+        canvas.addEventListener('click', handleCanvasClick);
+        
+        fillEraserBtn.addEventListener('click', () => {
+            if (!currentImage) return;
+            activeEraser = (activeEraser === 1) ? 0 : 1; 
+            activeLabel = null; 
+            isErasingDragging = false; 
+            canvas.classList.remove('eraser-cursor'); 
+            renderLabels(); 
+            updateUtilityButtonState(); 
+        });
+
+        dragEraserBtn.addEventListener('click', () => {
+            if (!currentImage) return;
+            activeEraser = (activeEraser === 2) ? 0 : 2; 
+            activeLabel = null; 
+            isErasingDragging = false; 
+            canvas.classList.toggle('eraser-cursor', activeEraser === 2); 
+            renderLabels(); 
+            updateUtilityButtonState(); 
+        });
+
+
+        function getCanvasPoint(event) {
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width; 
+            const scaleY = canvas.height / rect.height;
+
+            const x = (event.clientX - rect.left) * scaleX;
+            const y = (event.clientY - rect.top) * scaleY;
+            return { x: Math.floor(x), y: Math.floor(y) };
+        }
+
+        function handleCanvasClick(event) {
+            if (!currentImage) {
+                alert("Please load an image first.");
+                return;
+            }
+            
+            const { x, y } = getCanvasPoint(event);
+            
+            if (activeEraser === 0 && !activeLabel) {
+                 alert("Please select an active label or an eraser tool.");
+                 return;
+            }
+
+            if (activeEraser === 2) return; 
+
+            saveState(); 
+
+            if (activeEraser === 1) { 
+                handleFillEraserClick(x, y);
+            } else if (activeLabel) { 
+                handleFillClick(x, y);
+            }
+            
+            saveState(); 
+        }
+        
+        function handleFillClick(x, y) {
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(canvas, 0, 0); 
+
+            const imageData = tempCtx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            const initialPixelColor = getPixelColor(data, x, y, canvas.width);
+
+            const fillColor = hexToRgba(activeLabel.color, FILL_OPACITY);
+
+            const filledPixelsCount = floodFill(data, x, y, canvas.width, canvas.height, initialPixelColor, fillColor, false); 
+
+            tempCtx.putImageData(imageData, 0, 0); 
+
+            if (filledPixelsCount > 0) {
+                tempCtx.font = `bold ${currentLabelFontSize}px ${LABEL_FONT_FAMILY}`; 
+                tempCtx.fillStyle = '#00000'; 
+                //tempCtx.strokeStyle = LABEL_STROKE_COLOR; //
+               // tempCtx.lineWidth = currentLabelStrokeWidth;//
+                tempCtx.textAlign = 'center';
+                tempCtx.textBaseline = 'middle';
+               // tempCtx.strokeText(activeLabel.name, x, y); //
+                tempCtx.fillText(activeLabel.name, x, y); 
+
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(tempCanvas, 0, 0);
+            }
+        }
+        
+        function handleFillEraserClick(x, y) {
+            if (!originalImageData) return;
+
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = canvas.width;
+            tempCanvas.height = canvas.height;
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCtx.drawImage(canvas, 0, 0);
+            const currentImageData = tempCtx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = currentImageData.data;
+
+            const initialPixelColor = getPixelColor(data, x, y, canvas.width);
+            
+            if (initialPixelColor[3] < 100) return; 
+            
+            const clearedPixelsCount = floodFill(data, x, y, canvas.width, canvas.height, initialPixelColor, null, true, originalImageData); 
+
+            if (clearedPixelsCount > 0) {
+                tempCtx.putImageData(currentImageData, 0, 0); 
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(tempCanvas, 0, 0);
+            }
+        }
+
+        // --- Drag Eraser Logic ---
+        canvas.addEventListener('mousedown', (e) => {
+            if (activeEraser === 2) { 
+                isErasingDragging = true;
+                saveState(); 
+                handleDragEraserMove(e); 
+            }
+        });
+
+        canvas.addEventListener('mousemove', (e) => {
+            if (activeEraser === 2 && isErasingDragging) {
+                handleDragEraserMove(e);
+            }
+        });
+
+        canvas.addEventListener('mouseup', () => {
+            if (isErasingDragging) {
+                isErasingDragging = false;
+                saveState(); 
+            }
+        });
+        
+        function handleDragEraserMove(event) {
+            if (!currentImage || !originalImageData) return;
+
+            const { x, y } = getCanvasPoint(event);
+
+            const currentImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = currentImageData.data;
+
+            const halfSize = ERASER_SIZE / 2;
+            const startX = Math.max(0, x - halfSize);
+            const startY = Math.max(0, y - halfSize);
+            const endX = Math.min(canvas.width, x + halfSize);
+            const endY = Math.min(canvas.height, y + halfSize);
+
+            for (let i = startX; i < endX; i++) {
+                for (let j = startY; j < endY; j++) {
+                    const dist = Math.sqrt(Math.pow(i - x, 2) + Math.pow(j - y, 2));
+                    if (dist <= halfSize) {
+                        const originalColor = getPixelColor(originalImageData.data, i, j, canvas.width);
+                        setPixelColor(data, i, j, canvas.width, originalColor);
+                    }
+                }
+            }
+            ctx.putImageData(currentImageData, 0, 0);
+        }
+
+        // --- FLOOD FILL ALGORITHM ---
+        function floodFill(data, x, y, width, height, targetColor, fillColor, isErase, originalImageData) {
+            if (x < 0 || x >= width || y < 0 || y >= height) return 0;
+
+            const queue = [[x, y]];
+            const visited = new Uint8Array(width * height);
+            let filledCount = 0;
+            
+            while (queue.length > 0) {
+                const [cx, cy] = queue.shift();
+
+                const pixelIndex = cy * width + cx;
+                if (visited[pixelIndex]) continue;
+
+                visited[pixelIndex] = 1;
+
+                const currentColor = getPixelColor(data, cx, cy, width);
+
+                let shouldFill = false;
+                let nextFillColor = fillColor;
+
+                if (isErase) {
+                    const originalPixelColor = getPixelColor(originalImageData.data, cx, cy, width);
+                    if (colorDifference(currentColor, originalPixelColor) > 50 || currentColor[3] < 250) { 
+                        shouldFill = true;
+                        nextFillColor = originalPixelColor; 
+                    }
+                } else {
+                    const diffFromTarget = colorDifference(currentColor, targetColor);
+                    
+                    if (diffFromTarget < GAP_TOLERANCE) {
+                        if (diffFromTarget < COLOR_TOLERANCE) {
+                            shouldFill = true;
+                        }
+                    } else {
+                        continue; 
+                    }
+                }
+
+                if (shouldFill) {
+                    setPixelColor(data, cx, cy, width, nextFillColor);
+                    filledCount++;
+                    
+                    const neighbors = [[cx + 1, cy], [cx - 1, cy], [cx, cy + 1], [cx, cy - 1]];
+
+                    neighbors.forEach(([nx, ny]) => {
+                        if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                            const nIndex = ny * width + nx;
+                            if (!visited[nIndex]) {
+                                queue.push([nx, ny]);
+                            }
+                        }
+                    });
+                }
+            }
+            return filledCount;
+        }
+
+
+        // --- UNDO/CLEAR ADDITIONS ---
+        undoBtn.addEventListener('click', () => {
+            if (history.length > 1) {
+                history.pop(); 
+                const previousState = history[history.length - 1]; 
+                restoreState(previousState);
+                updateUtilityButtonState();
+            } else if (history.length === 1) {
+                clearAll();
+            }
+        });
+        
+        clearAllBtn.addEventListener('click', clearAll);
+
+        function clearAll() {
+            if (!currentImage) return;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(currentImage, 0, 0);
+            
+            history = [];
+            saveState(); 
+            updateUtilityButtonState();
+        }
+
+        // --- ZOOM AND PAN CONTROLS ---
+        function setZoomLevel(newLevel) {
+            zoomLevel = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newLevel));
+            currentZoomLevelEl.textContent = `${Math.round(zoomLevel * 100)}%`;
+            applyZoomAndPan();
+        }
+
+        function applyZoomAndPan() {
+            canvasWrapper.style.transform = `translate(${pan.x}px, ${pan.y}px) scale(${zoomLevel})`;
+        }
+
+        zoomInBtn.onclick = () => setZoomLevel(zoomLevel + 0.2);
+        zoomOutBtn.onclick = () => setZoomLevel(zoomLevel - 0.2);
+        zoomResetBtn.onclick = () => {
+            setZoomLevel(1.0);
+            pan = { x: 0, y: 0, startX: 0, startY: 0 };
+            applyZoomAndPan();
+        };
+
+        canvasWrapper.addEventListener('mousedown', (e) => {
+            if (activeEraser !== 0) return;
+            isDragging = true;
+            canvasWrapper.style.cursor = 'grabbing';
+            pan.startX = e.clientX - pan.x;
+            pan.startY = e.clientY - pan.y;
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            if (activeEraser !== 0) return; 
+
+            pan.x = e.clientX - pan.startX;
+            pan.y = e.clientY - pan.startY;
+            applyZoomAndPan();
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (!isDragging) return;
+            isDragging = false;
+            canvasWrapper.style.cursor = 'grab';
+        });
+
+        // --- LABEL SCALE CONTROLS ---
+        
+        function redrawLabels(newSize) {
+            currentLabelFontSize = newSize;
+            currentLabelStrokeWidth = Math.max(1, Math.round(newSize / 8)); // Adjusted stroke for 16px base size
+
+            if (currentImage) {
+                // To properly "redraw" with new label size, we need to re-apply the fills and labels.
+                // This is a simplified approach, as full re-rendering of all historical labels
+                // would require storing more state (like fill coordinates).
+                // For now, this will ensure NEW labels are drawn with the correct size.
+                // For existing labels, the change will only be visible if you clear and re-label.
+                
+                // If there's an image, restore to its initial (unlabeled) state
+                // and then prompt user to re-apply labels if they want consistent sizing.
+                if (originalImageData) {
+                    restoreState(originalImageData); // Restore to the original image data
+                    // Optional: Show a message to the user that they might need to re-label for full effect
+                }
+            }
+        }
+
+        labelScaleSlider.addEventListener('input', (e) => {
+            const newSize = parseInt(e.target.value);
+            redrawLabels(newSize);
+        });
+        
+        labelScaleResetBtn.addEventListener('click', () => {
+            labelScaleSlider.value = DEFAULT_LABEL_FONT_SIZE;
+            redrawLabels(DEFAULT_LABEL_FONT_SIZE);
+        });
+        
+        // --- DOWNLOAD FUNCTIONALITY ---
+        downloadBtn.addEventListener('click', () => {
+            if (!currentImage) {
+                alert("No image loaded to download!");
+                return;
+            }
+
+            const dataURL = canvas.toDataURL('image/png');
+            const a = document.createElement('a');
+            a.href = dataURL;
+            a.download = 'labeled_image.png';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        });
+
+        // Initial setup
+        renderLabels();
+        updateUtilityButtonState();
+        populateColorSwatches();
+        labelScaleSlider.value = DEFAULT_LABEL_FONT_SIZE; // Ensure slider matches default on load
+    </script>
+</body>
+</html>
