@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -452,22 +451,22 @@
         let currentImage = null;
         let labels = [];
         let activeLabel = null;
-        let selectedColor = null; // This now correctly holds the selected color
+        let selectedColor = null; 
         
         const FILL_OPACITY = 0.6;
         const COLOR_TOLERANCE = 35; 
         const GAP_TOLERANCE = 10;
-        const DEFAULT_LABEL_FONT_SIZE = 16; // Changed default size to 16
+        const DEFAULT_LABEL_FONT_SIZE = 16; 
         let currentLabelFontSize = DEFAULT_LABEL_FONT_SIZE; 
-        const DEFAULT_LABEL_STROKE_WIDTH = 2; // Default stroke width
+        const DEFAULT_LABEL_STROKE_WIDTH = 2; 
         let currentLabelStrokeWidth = DEFAULT_LABEL_STROKE_WIDTH;
 
-        const LABEL_FONT_FAMILY = "'Libre Baskerville', Arial"; // Font already bold from this family
-        const LABEL_STROKE_COLOR = '#000000'; // Set stroke to black
+        const LABEL_FONT_FAMILY = "'Libre Baskerville', Arial"; 
+        const LABEL_STROKE_COLOR = '#000000'; 
         
         let zoomLevel = 1.0;
         const MAX_ZOOM = 4.0;
-        const MIN_ZOOM = 1.0;
+        const MIN_ZOOM = 0.5; // MODIFIED: Allows zooming out to 50%
         let isDragging = false;
         let pan = { x: 0, y: 0, startX: 0, startY: 0 };
         
@@ -570,7 +569,7 @@
         });
 
         function selectColor(color) {
-            selectedColor = color; // Correctly set the selectedColor variable
+            selectedColor = color; 
             selectedColorPreview.style.backgroundColor = color;
             
             const swatches = colorSwatchSelector.querySelectorAll('.color-swatch');
@@ -598,9 +597,8 @@
                 }
             });
 
-            // Fix: If no color is selected, or the selected color is used, pick a recommended one.
             if (selectedColor === null || (nextColor && selectedColor !== nextColor)) {
-                 selectColor(nextColor || PRESET_COLORS[0]); // Fallback to first color if no recommended
+                 selectColor(nextColor || PRESET_COLORS[0]); 
             }
         }
 
@@ -1001,7 +999,8 @@
 
         // --- ZOOM AND PAN CONTROLS ---
         function setZoomLevel(newLevel) {
-            zoomLevel = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newLevel));
+            // Updated to use the new MIN_ZOOM of 0.5
+            zoomLevel = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, newLevel)); 
             currentZoomLevelEl.textContent = `${Math.round(zoomLevel * 100)}%`;
             applyZoomAndPan();
         }
@@ -1045,20 +1044,13 @@
         
         function redrawLabels(newSize) {
             currentLabelFontSize = newSize;
-            currentLabelStrokeWidth = Math.max(1, Math.round(newSize / 8)); // Adjusted stroke for 16px base size
+            currentLabelStrokeWidth = Math.max(1, Math.round(newSize / 8)); 
 
             if (currentImage) {
-                // To properly "redraw" with new label size, we need to re-apply the fills and labels.
-                // This is a simplified approach, as full re-rendering of all historical labels
-                // would require storing more state (like fill coordinates).
-                // For now, this will ensure NEW labels are drawn with the correct size.
-                // For existing labels, the change will only be visible if you clear and re-label.
-                
-                // If there's an image, restore to its initial (unlabeled) state
-                // and then prompt user to re-apply labels if they want consistent sizing.
                 if (originalImageData) {
-                    restoreState(originalImageData); // Restore to the original image data
-                    // Optional: Show a message to the user that they might need to re-label for full effect
+                    // Restores the original image data, clearing all labels.
+                    restoreState(originalImageData); 
+                    // Note: User must re-label to see the new font size applied consistently.
                 }
             }
         }
@@ -1093,10 +1085,7 @@
         renderLabels();
         updateUtilityButtonState();
         populateColorSwatches();
-        labelScaleSlider.value = DEFAULT_LABEL_FONT_SIZE; // Ensure slider matches default on load
+        labelScaleSlider.value = DEFAULT_LABEL_FONT_SIZE; 
     </script>
 </body>
 </html>
-
-
-
